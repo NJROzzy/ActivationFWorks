@@ -22,4 +22,4 @@ Work here follows the same style as the rest of the collaboration: concepts expl
 
 ## Notes
 
-This folder is expected to evolve as functions are explored and comparisons are added — treat it as a living reference rather than a fixed structure.
+This folder is expected to evolve as functions are explored and comparisons are added — treat it as a living reference rather than a fixed structure.a
