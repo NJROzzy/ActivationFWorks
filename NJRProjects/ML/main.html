@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ML Mini Library</title>
+<style>
+:root {
+  --bg: #f7f6f2; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e3e1d9;
+  --accent: #2f5bd3; --accent-soft: #e8eefc; --code-bg: #f1efe8; --good: #1f7a4d; --bad: #b3412e;
+  --shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141413; --panel: #1d1d1b; --ink: #ecebe6; --muted: #9a998f; --line: #2e2d2a;
+    --accent: #7ea2ff; --accent-soft: #1f2842; --code-bg: #25241f; --good: #5fc592; --bad: #f08b75;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141413; --panel: #1d1d1b; --ink: #ecebe6; --muted: #9a998f; --line: #2e2d2a;
+  --accent: #7ea2ff; --accent-soft: #1f2842; --code-bg: #25241f; --good: #5fc592; --bad: #f08b75;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+}
+code, pre, .formula { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+a { color: var(--accent); }
+
+header {
+  position: sticky; top: 0; z-index: 10; background: var(--bg);
+  border-bottom: 1px solid var(--line); padding: 12px 16px;
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+}
+header h1 { font-size: 18px; margin: 0; white-space: nowrap; }
+header h1 span { color: var(--muted); font-weight: 400; }
+#search {
+  flex: 1; min-width: 180px; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 15px;
+}
+#search:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+button {
+  font: inherit; font-size: 13px; cursor: pointer; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 7px 10px;
+}
+button:hover { border-color: var(--accent); }
+#count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+.layout { display: grid; grid-template-columns: 230px 1fr; max-width: 1280px; margin: 0 auto; }
+nav {
+  position: sticky; top: 61px; align-self: start; height: calc(100vh - 61px); overflow-y: auto;
+  padding: 16px 8px 40px 16px; border-right: 1px solid var(--line);
+}
+nav a {
+  display: flex; justify-content: space-between; padding: 5px 8px; border-radius: 6px;
+  color: var(--ink); text-decoration: none; font-size: 14px;
+}
+nav a:hover { background: var(--accent-soft); }
+nav a small { color: var(--muted); }
+main { padding: 16px 24px 80px; min-width: 0; }
+
+section { margin-bottom: 36px; scroll-margin-top: 72px; }
+section > h2 { font-size: 20px; margin: 8px 0 4px; }
+section > p.lead { color: var(--muted); margin: 0 0 14px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; box-shadow: var(--shadow); min-width: 0;
+}
+.card h3 { margin: 0 0 4px; font-size: 16px; }
+.card p { margin: 6px 0; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 6px; }
+.tag { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.formula {
+  background: var(--code-bg); border-radius: 6px; padding: 8px 10px; margin: 8px 0;
+  font-size: 13px; overflow-x: auto; white-space: pre;
+}
+.pc { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; margin-top: 6px; }
+.pc ul { margin: 2px 0 0; padding-left: 18px; }
+.pc b.good { color: var(--good); } .pc b.bad { color: var(--bad); }
+details { margin-top: 8px; }
+summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+pre {
+  background: var(--code-bg); border-radius: 6px; padding: 10px; margin: 6px 0 0;
+  font-size: 12.5px; overflow-x: auto; line-height: 1.5;
+}
+mark { background: #ffe58a; color: #1d1d1b; border-radius: 2px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--panel); }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+
+/* activation plotter */
+.plotter { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.plotter .controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.plotter button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.plotter canvas { width: 100%; height: 320px; display: block; }
+.plotter .legend { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+.empty { color: var(--muted); padding: 40px 0; text-align: center; display: none; }
+
+@media (max-width: 820px) {
+  .layout { grid-template-columns: 1fr; }
+  nav {
+    position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line);
+    display: flex; overflow-x: auto; padding: 8px 16px; gap: 4px;
+  }
+  nav a { white-space: nowrap; }
+  nav a small { display: none; }
+  main { padding: 16px; }
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>ML Mini Library <span>· everything in one page</span></h1>
+  <input id="search" type="search" placeholder="Search topics, formulas, code…  (press / to focus)" autocomplete="off">
+  <span id="count"></span>
+  <button id="expand">Expand code</button>
+  <button id="theme" title="Toggle theme">◐</button>
+</header>
+
+<div class="layout">
+  <nav id="nav"></nav>
+  <main id="main">
+    <div class="empty" id="empty">No topics match your search.</div>
+  </main>
+</div>
+
+<script>
+/* =========================================================================
+   DATA — each section has entries: { t: title, tags, d: description,
+   f: formula, pros, cons, code }. Add new topics by appending here.
+   ========================================================================= */
+const LIB = [
+{
+  id: "foundations", name: "Foundations",
+  lead: "What ML is, the main problem types, and the ideas every model relies on.",
+  items: [
+    { t: "What is Machine Learning?", tags: ["concept"],
+      d: "Algorithms that learn a function f(x) → y from data instead of being explicitly programmed. A model has parameters θ that are fitted by minimising a loss on training data, and it's judged on how well it generalises to unseen data." },
+    { t: "Supervised Learning", tags: ["paradigm"],
+      d: "Learn from labelled pairs (x, y). Regression predicts continuous y; classification predicts discrete classes.",
+      f: "θ* = argmin_θ  (1/n) Σ L(f_θ(xᵢ), yᵢ)" },
+    { t: "Unsupervised Learning", tags: ["paradigm"],
+      d: "There are no labels, so the model finds structure: clusters, low-dimensional representations, densities or anomalies." },
+    { t: "Semi- & Self-Supervised Learning", tags: ["paradigm"],
+      d: "Semi-supervised learning uses a few labels plus many unlabelled examples. Self-supervised learning creates labels from the data itself, such as predicting the next token or a masked patch. It's the basis of modern foundation models." },
+    { t: "Reinforcement Learning", tags: ["paradigm"],
+      d: "An agent acts in an environment, receives rewards, and learns a policy π(a|s) that maximises expected discounted return.",
+      f: "G_t = Σ_k γᵏ r_{t+k+1}" },
+    { t: "Bias–Variance Tradeoff", tags: ["theory"],
+      d: "Expected error splits into bias² (too-simple model, underfitting), variance (too-sensitive model, overfitting) and irreducible noise.",
+      f: "E[(y − ŷ)²] = Bias² + Variance + σ²" },
+    { t: "Overfitting vs Underfitting", tags: ["theory"],
+      d: "An overfit model has low train error and high test error, so it has memorised noise. An underfit model has high error on both, so it's too simple. Fix overfitting with more data, regularisation or a simpler model. Fix underfitting with more features, more capacity or longer training." },
+    { t: "No Free Lunch Theorem", tags: ["theory"],
+      d: "Averaged over all possible problems, no single algorithm beats all others. Model choice has to reflect assumptions about your data." },
+    { t: "Curse of Dimensionality", tags: ["theory"],
+      d: "As the number of dimensions grows, data becomes sparse, distances concentrate, and the amount of data needed grows exponentially. This hurts k-NN and density estimation especially." },
+    { t: "Parametric vs Non-parametric", tags: ["concept"],
+      d: "A parametric model (linear regression, a neural net) has a fixed number of parameters. A non-parametric model (k-NN, decision trees, Gaussian processes) grows its complexity with the data." },
+    { t: "Generative vs Discriminative", tags: ["concept"],
+      d: "Discriminative models learn P(y|x) directly (logistic regression, SVM). Generative models learn P(x, y) or P(x), so they can sample new data (Naive Bayes, GANs, diffusion models, LLMs)." },
+    { t: "The ML Workflow", tags: ["process"],
+      d: "1) Frame the problem and metric → 2) Collect data → 3) EDA → 4) Clean and preprocess → 5) Split train/val/test → 6) Baseline → 7) Train and tune → 8) Evaluate on test once → 9) Deploy → 10) Monitor for drift." }
+  ]
+},
+{
+  id: "math", name: "Math Essentials",
+  lead: "The linear algebra, calculus, probability and statistics behind ML.",
+  items: [
+    { t: "Vectors, Matrices & Dot Product", tags: ["linear algebra"],
+      d: "Data is a matrix X (n samples × d features). The dot product measures alignment, and matrix multiplication composes linear maps.",
+      f: "a·b = Σ aᵢbᵢ = ‖a‖‖b‖cos θ\n(AB)ᵢⱼ = Σₖ AᵢₖBₖⱼ",
+      code: `import numpy as np
+X = np.random.randn(100, 3)
+w = np.array([0.5, -1.0, 2.0])
+y_hat = X @ w  # (100,)` },
+    { t: "Eigenvalues & SVD", tags: ["linear algebra"],
+      d: "Av = λv. SVD factorises any matrix as UΣVᵀ. It powers PCA, low-rank approximation, pseudo-inverses and recommender systems.",
+      f: "X = U Σ Vᵀ",
+      code: `U, S, Vt = np.linalg.svd(X, full_matrices=False)` },
+    { t: "Norms", tags: ["linear algebra"],
+      d: "L1 is the sum of absolute values and encourages sparsity. L2 is Euclidean length and encourages small weights. L∞ is the maximum absolute value.",
+      f: "‖x‖₁ = Σ|xᵢ|   ‖x‖₂ = √Σxᵢ²   ‖x‖∞ = max|xᵢ|" },
+    { t: "Derivatives, Gradient & Chain Rule", tags: ["calculus"],
+      d: "The gradient points in the direction of steepest ascent. The chain rule is what backpropagation uses to send error signals through layers.",
+      f: "∇f = [∂f/∂x₁, …, ∂f/∂xₙ]\ndz/dx = dz/dy · dy/dx" },
+    { t: "Jacobian & Hessian", tags: ["calculus"],
+      d: "The Jacobian holds the first derivatives of a vector function. The Hessian holds the second derivatives of a scalar function and describes curvature, which second-order optimisers (Newton, L-BFGS) use." },
+    { t: "Probability Basics", tags: ["probability"],
+      d: "Joint, marginal and conditional probability, independence, expectation and variance.",
+      f: "P(A|B) = P(A∩B) / P(B)\nE[X] = Σ x P(x)   Var(X) = E[X²] − E[X]²" },
+    { t: "Bayes' Theorem", tags: ["probability"],
+      d: "Updates a belief after seeing evidence. It's the basis of Naive Bayes, Bayesian inference and MAP estimation.",
+      f: "P(θ|D) = P(D|θ) P(θ) / P(D)\nposterior ∝ likelihood × prior" },
+    { t: "Common Distributions", tags: ["probability"],
+      d: "Bernoulli/Binomial (binary), Categorical/Multinomial (classes), Gaussian (continuous, CLT), Poisson (counts), Uniform, Exponential, Beta/Dirichlet (priors over probabilities).",
+      f: "N(x; μ, σ²) = 1/√(2πσ²) · exp(−(x−μ)²/2σ²)" },
+    { t: "MLE & MAP", tags: ["statistics"],
+      d: "Maximum Likelihood picks the θ that maximises P(D|θ). MAP adds a prior. A Gaussian prior gives L2 regularisation, and a Laplace prior gives L1.",
+      f: "θ_MLE = argmax Σ log P(xᵢ|θ)\nθ_MAP = argmax Σ log P(xᵢ|θ) + log P(θ)" },
+    { t: "Entropy, Cross-Entropy, KL Divergence", tags: ["information theory"],
+      d: "Entropy measures uncertainty. Cross-entropy is the cost of coding p with q. KL divergence is the gap between them and is ≥ 0.",
+      f: "H(p) = −Σ p log p\nH(p,q) = −Σ p log q\nKL(p‖q) = Σ p log(p/q) = H(p,q) − H(p)" },
+    { t: "Hypothesis Testing & p-values", tags: ["statistics"],
+      d: "A p-value is the probability of data at least this extreme if H₀ is true. Use it for A/B tests and for comparing models (paired t-test, McNemar). Watch out for multiple comparisons." },
+    { t: "Correlation vs Causation", tags: ["statistics"],
+      d: "Pearson measures linear correlation and Spearman measures rank correlation. Correlation doesn't imply causation, because confounders exist. Causal claims need experiments or causal inference methods.",
+      f: "ρ = cov(X,Y) / (σ_X σ_Y)" }
+  ]
+},
+{
+  id: "data", name: "Data & Preprocessing",
+  lead: "Garbage in, garbage out. Most of the real work in ML happens here.",
+  items: [
+    { t: "Exploratory Data Analysis (EDA)", tags: ["pandas", "seaborn"],
+      d: "Check shape, dtypes, missing values, distributions, outliers, class balance and correlations before modelling.",
+      code: `import pandas as pd, seaborn as sns
+df = pd.read_csv("data.csv")
+df.info(); df.describe()
+df.isna().mean().sort_values(ascending=False)
+sns.pairplot(df, hue="target")
+sns.heatmap(df.corr(numeric_only=True), annot=True, cmap="coolwarm")` },
+    { t: "Handling Missing Values", tags: ["cleaning"],
+      d: "Drop rows or columns, impute with the mean/median/mode, use KNN or iterative imputation, or add a 'was_missing' indicator. Fit the imputer on training data only.",
+      code: `from sklearn.impute import SimpleImputer
+imp = SimpleImputer(strategy="median")
+X_train = imp.fit_transform(X_train)
+X_test  = imp.transform(X_test)` },
+    { t: "Feature Scaling", tags: ["preprocessing"],
+      d: "Standardisation gives zero mean and unit variance. Min-max scaling maps to [0,1]. Robust scaling uses the median and IQR. Gradient-based and distance-based models need scaling; tree models don't.",
+      f: "z = (x − μ) / σ\nx' = (x − min) / (max − min)",
+      code: `from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+sc = StandardScaler().fit(X_train)
+X_train, X_test = sc.transform(X_train), sc.transform(X_test)` },
+    { t: "Encoding Categorical Variables", tags: ["preprocessing"],
+      d: "One-hot for nominal categories, ordinal encoding for ordered ones, target or mean encoding for high cardinality (risk of leakage), and embeddings for very high cardinality in neural nets.",
+      code: `from sklearn.preprocessing import OneHotEncoder
+enc = OneHotEncoder(handle_unknown="ignore")
+pd.get_dummies(df, columns=["city"], drop_first=True)` },
+    { t: "Outlier Detection", tags: ["cleaning"],
+      d: "The IQR rule flags points outside [Q1 − 1.5·IQR, Q3 + 1.5·IQR]. You can also use z-score > 3, Isolation Forest or LOF. Decide whether an outlier is an error or a genuine signal before removing it.",
+      f: "IQR = Q3 − Q1" },
+    { t: "Feature Engineering", tags: ["features"],
+      d: "Create informative inputs: ratios, interactions, polynomial terms, log transforms for skewed data, date parts (day of week, month), text statistics, aggregations and lags for time series. Domain knowledge helps most here." },
+    { t: "Feature Selection", tags: ["features"],
+      d: "Filter methods (correlation, chi², mutual information), wrapper methods (RFE, forward/backward selection) and embedded methods (L1/Lasso, tree importances). Selection reduces overfitting and cost.",
+      code: `from sklearn.feature_selection import SelectKBest, mutual_info_classif, RFE
+X_new = SelectKBest(mutual_info_classif, k=10).fit_transform(X, y)` },
+    { t: "Train / Validation / Test Split", tags: ["splitting"],
+      d: "Train fits the parameters, validation tunes hyperparameters, and test gives a single final unbiased estimate. Use stratify for imbalanced classes, time-ordered splits for temporal data, and group splits when samples are related.",
+      code: `from sklearn.model_selection import train_test_split
+X_tr, X_te, y_tr, y_te = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42)` },
+    { t: "Data Leakage", tags: ["pitfall"],
+      d: "Leakage happens when information from the test set or the future reaches training, for example by scaling before splitting, using features computed with the target, or shuffling time series. It gives inflated scores that collapse in production. Use Pipelines to prevent it." },
+    { t: "Imbalanced Data", tags: ["pitfall"],
+      d: "Use suitable metrics (PR-AUC, F1, recall). Options are class weights, oversampling (SMOTE), undersampling, threshold tuning, or anomaly-detection framing.",
+      code: `LogisticRegression(class_weight="balanced")
+from imblearn.over_sampling import SMOTE
+X_res, y_res = SMOTE().fit_resample(X_tr, y_tr)` },
+    { t: "Pipelines", tags: ["sklearn"],
+      d: "Chain preprocessing and the model so every step is fitted only on training folds. This makes leakage-free cross-validation and deployment easy.",
+      code: `from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+pre = ColumnTransformer([
+    ("num", StandardScaler(), num_cols),
+    ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols)])
+pipe = Pipeline([("pre", pre), ("clf", LogisticRegression())])
+pipe.fit(X_tr, y_tr)` }
+  ]
+},
+{
+  id: "regression", name: "Regression",
+  lead: "Predicting a continuous target.",
+  items: [
+    { t: "Linear Regression", tags: ["supervised", "linear"],
+      d: "Fits a hyperplane that minimises squared error. It has a closed-form solution (Normal Equation) or can be fitted with gradient descent. It assumes linearity, independent errors, homoscedasticity and normal residuals.",
+      f: "ŷ = wᵀx + b\nw = (XᵀX)⁻¹ Xᵀy",
+      pros: ["Fast, interpretable", "Good baseline"], cons: ["Only linear relations", "Sensitive to outliers & multicollinearity"],
+      code: `from sklearn.linear_model import LinearRegression
+m = LinearRegression().fit(X_tr, y_tr)
+m.coef_, m.intercept_, m.score(X_te, y_te)  # R²` },
+    { t: "Polynomial Regression", tags: ["supervised"],
+      d: "Linear regression on polynomial features, which captures curvature. A high degree overfits, so pair it with regularisation.",
+      f: "ŷ = w₀ + w₁x + w₂x² + … + w_d xᵈ",
+      code: `from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import make_pipeline
+m = make_pipeline(PolynomialFeatures(3), LinearRegression())` },
+    { t: "Ridge Regression (L2)", tags: ["regularised"],
+      d: "Adds an L2 penalty that shrinks weights toward 0. It handles multicollinearity well.",
+      f: "L = ‖y − Xw‖² + α‖w‖₂²",
+      code: `from sklearn.linear_model import Ridge
+Ridge(alpha=1.0).fit(X_tr, y_tr)` },
+    { t: "Lasso Regression (L1)", tags: ["regularised"],
+      d: "Adds an L1 penalty that drives some weights to exactly 0, so it also does feature selection.",
+      f: "L = ‖y − Xw‖² + α‖w‖₁",
+      code: `from sklearn.linear_model import Lasso
+Lasso(alpha=0.1).fit(X_tr, y_tr)` },
+    { t: "Elastic Net", tags: ["regularised"],
+      d: "Mixes L1 and L2, so it gets sparsity while staying stable when features are correlated.",
+      f: "L = ‖y − Xw‖² + α(ρ‖w‖₁ + (1−ρ)/2 ‖w‖₂²)" },
+    { t: "Support Vector Regression", tags: ["kernel"],
+      d: "Fits a tube of width ε around the data. Only errors outside the tube count. Kernels make it non-linear." },
+    { t: "Quantile & Robust Regression", tags: ["robust"],
+      d: "Quantile regression predicts conditional quantiles such as the median or the 90th percentile, which is useful for prediction intervals. Huber loss and RANSAC resist outliers." }
+  ]
+},
+{
+  id: "classification", name: "Classification",
+  lead: "Predicting discrete labels.",
+  items: [
+    { t: "Logistic Regression", tags: ["linear", "probabilistic"],
+      d: "A linear model passed through a sigmoid to output P(y=1|x), trained with log loss. Softmax regression extends it to multiple classes.",
+      f: "P(y=1|x) = σ(wᵀx + b) = 1 / (1 + e^−(wᵀx+b))",
+      pros: ["Calibrated probabilities", "Interpretable (log-odds)"], cons: ["Linear decision boundary"],
+      code: `from sklearn.linear_model import LogisticRegression
+clf = LogisticRegression(C=1.0, max_iter=1000).fit(X_tr, y_tr)
+clf.predict_proba(X_te)[:, 1]` },
+    { t: "k-Nearest Neighbours", tags: ["instance-based"],
+      d: "Predicts by majority vote (or the mean) of the k closest training points. There's no training step, but prediction is slow. It needs feature scaling.",
+      f: "d(x, x') = √Σ(xᵢ − x'ᵢ)²",
+      pros: ["Simple, non-linear"], cons: ["Slow at inference", "Curse of dimensionality"],
+      code: `from sklearn.neighbors import KNeighborsClassifier
+KNeighborsClassifier(n_neighbors=5).fit(X_tr, y_tr)` },
+    { t: "Naive Bayes", tags: ["probabilistic", "generative"],
+      d: "Bayes' theorem with the assumption that features are conditionally independent. It's fast and strong for text (Multinomial/Bernoulli NB). Gaussian NB is for continuous features.",
+      f: "P(y|x) ∝ P(y) Π P(xᵢ|y)",
+      code: `from sklearn.naive_bayes import GaussianNB, MultinomialNB
+MultinomialNB().fit(X_counts, y)` },
+    { t: "Support Vector Machine", tags: ["kernel", "max-margin"],
+      d: "Finds the hyperplane with the maximum margin between classes. Soft margin (C) allows some errors. The kernel trick (RBF, polynomial) gives non-linear boundaries without computing the high-dimensional features explicitly.",
+      f: "min ½‖w‖² + C Σ ξᵢ   s.t. yᵢ(wᵀxᵢ + b) ≥ 1 − ξᵢ\nRBF: K(x,x') = exp(−γ‖x − x'‖²)",
+      pros: ["Effective in high dims", "Robust margin"], cons: ["Slow on large n", "Needs scaling, tuning C/γ"],
+      code: `from sklearn.svm import SVC
+SVC(kernel="rbf", C=1.0, gamma="scale", probability=True)` },
+    { t: "Decision Tree", tags: ["tree"],
+      d: "Recursively splits features to maximise purity, using Gini impurity or entropy (information gain). Trees are interpretable but overfit easily, so control max_depth and min_samples_leaf.",
+      f: "Gini = 1 − Σ pₖ²\nEntropy = −Σ pₖ log₂ pₖ\nIG = H(parent) − Σ (nᵢ/n) H(childᵢ)",
+      pros: ["Interpretable", "No scaling needed", "Handles mixed types"], cons: ["High variance", "Axis-aligned splits"],
+      code: `from sklearn.tree import DecisionTreeClassifier, plot_tree
+t = DecisionTreeClassifier(max_depth=4).fit(X_tr, y_tr)
+plot_tree(t, feature_names=cols, filled=True)` },
+    { t: "Multi-class Strategies", tags: ["concept"],
+      d: "One-vs-Rest trains K binary models. One-vs-One trains K(K−1)/2 models. Softmax is native multinomial. Multi-label problems use independent sigmoids." },
+    { t: "Decision Threshold & Calibration", tags: ["concept"],
+      d: "The default threshold of 0.5 is rarely optimal, so tune it on validation data for your cost tradeoff. Calibrate probabilities with Platt scaling or isotonic regression.",
+      code: `from sklearn.calibration import CalibratedClassifierCV
+CalibratedClassifierCV(base_clf, method="isotonic", cv=5)` }
+  ]
+},
+{
+  id: "ensembles", name: "Ensembles & Trees",
+  lead: "Combining many weak models into a strong one. Often the best choice for tabular data.",
+  items: [
+    { t: "Bagging", tags: ["variance ↓"],
+      d: "Bootstrap Aggregating trains models on bootstrap samples and averages or votes their predictions. It reduces variance. Out-of-bag samples give a free validation estimate." },
+    { t: "Random Forest", tags: ["bagging", "tree"],
+      d: "Bagged decision trees that also consider a random subset of features at each split, which decorrelates the trees. It's robust, needs little tuning and gives feature importances.",
+      pros: ["Strong default", "Little tuning", "OOB score"], cons: ["Large models", "Less interpretable"],
+      code: `from sklearn.ensemble import RandomForestClassifier
+rf = RandomForestClassifier(n_estimators=300, max_features="sqrt",
+                            oob_score=True, n_jobs=-1).fit(X_tr, y_tr)
+rf.feature_importances_` },
+    { t: "Boosting (AdaBoost)", tags: ["bias ↓"],
+      d: "Trains weak learners one after another, re-weighting misclassified samples each round. The final model is a weighted vote.",
+      f: "F(x) = Σ αₘ hₘ(x)" },
+    { t: "Gradient Boosting", tags: ["boosting"],
+      d: "Each new tree fits the negative gradient (residuals) of the loss for the current ensemble. The learning rate shrinks each step.",
+      f: "Fₘ(x) = Fₘ₋₁(x) + η · hₘ(x),   hₘ ≈ −∂L/∂F" },
+    { t: "XGBoost / LightGBM / CatBoost", tags: ["boosting", "SOTA tabular"],
+      d: "Optimised gradient-boosting libraries. XGBoost uses regularised objectives and second-order gradients. LightGBM uses histogram and leaf-wise growth and is very fast. CatBoost handles categorical features natively with ordered boosting.",
+      code: `import lightgbm as lgb
+m = lgb.LGBMClassifier(n_estimators=1000, learning_rate=0.05,
+                       num_leaves=31, subsample=0.8, colsample_bytree=0.8)
+m.fit(X_tr, y_tr, eval_set=[(X_val, y_val)],
+      callbacks=[lgb.early_stopping(50)])` },
+    { t: "Stacking & Voting", tags: ["meta"],
+      d: "Voting averages predictions (hard or soft). Stacking trains a meta-model on out-of-fold predictions from the base models.",
+      code: `from sklearn.ensemble import StackingClassifier
+StackingClassifier(estimators=[("rf", rf), ("svm", svm)],
+                   final_estimator=LogisticRegression())` }
+  ]
+},
+{
+  id: "unsupervised", name: "Unsupervised Learning",
+  lead: "Finding structure without labels: clustering, dimensionality reduction and anomalies.",
+  items: [
+    { t: "k-Means", tags: ["clustering"],
+      d: "Alternates between assigning points to the nearest centroid and recomputing centroids, which minimises within-cluster variance. Choose k with the elbow method or silhouette score. It assumes round clusters of similar size.",
+      f: "J = Σₖ Σ_{x∈Cₖ} ‖x − μₖ‖²",
+      code: `from sklearn.cluster import KMeans
+km = KMeans(n_clusters=4, n_init=10).fit(X)
+km.labels_, km.inertia_` },
+    { t: "Hierarchical Clustering", tags: ["clustering"],
+      d: "Agglomerative clustering starts with every point as its own cluster and merges them bottom-up. The linkage (single, complete, average, Ward) defines how cluster distance is measured. Cut the dendrogram to get k clusters." },
+    { t: "DBSCAN", tags: ["clustering", "density"],
+      d: "Groups points that are densely packed (eps, min_samples) and marks sparse points as noise. It finds arbitrarily shaped clusters and doesn't need k.",
+      code: `from sklearn.cluster import DBSCAN
+DBSCAN(eps=0.5, min_samples=5).fit_predict(X)` },
+    { t: "Gaussian Mixture Models", tags: ["clustering", "probabilistic"],
+      d: "Soft clustering that treats the data as a mixture of Gaussians, fitted with Expectation–Maximisation (EM). It gives each point a probability of belonging to each cluster.",
+      f: "p(x) = Σₖ πₖ N(x; μₖ, Σₖ)" },
+    { t: "PCA", tags: ["dim. reduction", "linear"],
+      d: "Projects data onto orthogonal directions of maximum variance, which are the eigenvectors of the covariance matrix. Use it for compression, denoising and visualisation. Scale the features first.",
+      f: "Σ = (1/n) XᵀX,   Σv = λv\nexplained var ratio = λᵢ / Σλ",
+      code: `from sklearn.decomposition import PCA
+pca = PCA(n_components=0.95).fit(X_scaled)   # keep 95% variance
+pca.explained_variance_ratio_` },
+    { t: "t-SNE & UMAP", tags: ["dim. reduction", "non-linear"],
+      d: "Non-linear embeddings that preserve local neighbourhoods, mostly used for 2D and 3D visualisation. UMAP is faster and keeps more global structure. Distances between clusters in the plot aren't meaningful.",
+      code: `from sklearn.manifold import TSNE
+emb = TSNE(n_components=2, perplexity=30).fit_transform(X)` },
+    { t: "Anomaly Detection", tags: ["outliers"],
+      d: "Isolation Forest isolates outliers with random splits, since anomalies need fewer splits to isolate. Other options are One-Class SVM, Local Outlier Factor and autoencoder reconstruction error.",
+      code: `from sklearn.ensemble import IsolationForest
+IsolationForest(contamination=0.01).fit_predict(X)  # -1 = anomaly` },
+    { t: "Association Rules", tags: ["market basket"],
+      d: "Apriori and FP-Growth find itemsets that occur together, as in 'if bread then butter'. Rules are measured by support, confidence and lift.",
+      f: "lift(A→B) = P(A∩B) / (P(A) P(B))" }
+  ]
+},
+{
+  id: "evaluation", name: "Evaluation & Metrics",
+  lead: "Measure what matters, and validate honestly.",
+  items: [
+    { t: "Confusion Matrix", tags: ["classification"],
+      d: "A table of TP, FP, FN and TN. Most classification metrics are computed from it.",
+      f: "              Pred +   Pred −\nActual +       TP       FN\nActual −       FP       TN",
+      code: `from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+ConfusionMatrixDisplay.from_estimator(clf, X_te, y_te)` },
+    { t: "Accuracy, Precision, Recall, F1", tags: ["classification"],
+      d: "Precision asks how many predicted positives were right. Recall asks how many actual positives were found. F1 is their harmonic mean. Accuracy is misleading on imbalanced data.",
+      f: "Accuracy  = (TP+TN) / N\nPrecision = TP / (TP+FP)\nRecall    = TP / (TP+FN)\nF1        = 2PR / (P+R)",
+      code: `from sklearn.metrics import classification_report
+print(classification_report(y_te, y_pred))` },
+    { t: "ROC-AUC & PR-AUC", tags: ["classification"],
+      d: "The ROC curve plots TPR against FPR across thresholds, and its AUC is the probability that a random positive ranks above a random negative. The PR curve suits heavy class imbalance better.",
+      f: "TPR = TP/(TP+FN)   FPR = FP/(FP+TN)",
+      code: `from sklearn.metrics import roc_auc_score, average_precision_score
+roc_auc_score(y_te, proba); average_precision_score(y_te, proba)` },
+    { t: "Log Loss", tags: ["classification", "probabilistic"],
+      d: "Penalises confident wrong predictions heavily. It evaluates probability quality, not just the ranking.",
+      f: "LogLoss = −(1/n) Σ [y log p + (1−y) log(1−p)]" },
+    { t: "Regression Metrics", tags: ["regression"],
+      d: "MAE is robust and in the target's units. MSE and RMSE penalise large errors. R² is the fraction of variance explained. MAPE is a percentage error but breaks when y is near 0.",
+      f: "MAE  = (1/n) Σ|y − ŷ|\nMSE  = (1/n) Σ(y − ŷ)²\nRMSE = √MSE\nR²   = 1 − SS_res / SS_tot" },
+    { t: "Clustering Metrics", tags: ["unsupervised"],
+      d: "Without labels, use the silhouette score (−1 to 1, higher is better), Davies–Bouldin (lower is better) or Calinski–Harabasz. With labels, use ARI or NMI.",
+      f: "s = (b − a) / max(a, b)" },
+    { t: "Cross-Validation", tags: ["validation"],
+      d: "k-Fold trains on k−1 folds and validates on the remaining one, rotating k times. Use Stratified k-Fold for classification, GroupKFold when samples are related, TimeSeriesSplit for temporal data, and nested CV to tune and evaluate without bias.",
+      code: `from sklearn.model_selection import cross_val_score, StratifiedKFold
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+scores = cross_val_score(pipe, X, y, cv=cv, scoring="f1")
+scores.mean(), scores.std()` },
+    { t: "Learning & Validation Curves", tags: ["diagnostics"],
+      d: "Plot the score against training size (learning curve) or against a hyperparameter (validation curve). A large train/val gap means high variance. If both scores are low, the model has high bias." },
+    { t: "Hyperparameter Tuning", tags: ["tuning"],
+      d: "Grid search tries every combination. Random search is often better per unit of compute. Bayesian optimisation (Optuna, Hyperopt) models the objective. Successive halving and Hyperband cut bad trials early.",
+      code: `from sklearn.model_selection import RandomizedSearchCV
+search = RandomizedSearchCV(pipe, param_distributions=params,
+                            n_iter=50, cv=5, scoring="roc_auc", n_jobs=-1)
+search.fit(X_tr, y_tr); search.best_params_` }
+  ]
+},
+{
+  id: "neural", name: "Neural Networks",
+  lead: "Layers of learned linear maps and non-linearities, trained with backpropagation.",
+  items: [
+    { t: "Perceptron & Neuron", tags: ["basics"],
+      d: "A neuron computes a weighted sum plus a bias, then applies an activation. A single perceptron can only separate linearly separable data, so it can't learn XOR.",
+      f: "a = φ(wᵀx + b)" },
+    { t: "Multi-Layer Perceptron (MLP)", tags: ["architecture"],
+      d: "Stacked fully connected layers with non-linear activations. The Universal Approximation Theorem says one wide enough hidden layer can approximate any continuous function.",
+      f: "h₁ = φ(W₁x + b₁)\nŷ  = W₂h₁ + b₂",
+      code: `import torch.nn as nn
+model = nn.Sequential(
+    nn.Linear(784, 256), nn.ReLU(), nn.Dropout(0.2),
+    nn.Linear(256, 128), nn.ReLU(),
+    nn.Linear(128, 10))` },
+    { t: "Forward & Backpropagation", tags: ["training"],
+      d: "The forward pass computes predictions and the loss. The backward pass applies the chain rule layer by layer to get ∂L/∂W for every weight, reusing intermediate values. This is what autograd does.",
+      f: "δˡ = (Wˡ⁺¹ᵀ δˡ⁺¹) ⊙ φ'(zˡ)\n∂L/∂Wˡ = δˡ (aˡ⁻¹)ᵀ" },
+    { t: "Training Loop (PyTorch)", tags: ["code"],
+      d: "The standard pattern: forward, loss, zero the gradients, backward, optimiser step.",
+      code: `opt = torch.optim.AdamW(model.parameters(), lr=1e-3)
+loss_fn = nn.CrossEntropyLoss()
+for epoch in range(epochs):
+    model.train()
+    for xb, yb in train_loader:
+        loss = loss_fn(model(xb), yb)
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+    model.eval()
+    with torch.no_grad():
+        val_loss = sum(loss_fn(model(x), y) for x, y in val_loader)` },
+    { t: "Weight Initialisation", tags: ["training"],
+      d: "Good initialisation keeps activation variance stable across layers. Use Xavier/Glorot for tanh or sigmoid and He/Kaiming for ReLU. All-zero weights break symmetry learning because every neuron stays identical.",
+      f: "Xavier: Var(W) = 2/(n_in + n_out)\nHe:     Var(W) = 2/n_in" },
+    { t: "Vanishing & Exploding Gradients", tags: ["pitfall"],
+      d: "Repeated multiplication shrinks or blows up gradients in deep or recurrent networks. Fixes: ReLU-family activations, good initialisation, normalisation layers, residual connections, gradient clipping, and LSTM/GRU for sequences." },
+    { t: "Batch Norm & Layer Norm", tags: ["normalisation"],
+      d: "BatchNorm normalises each feature over the batch and is common in CNNs. LayerNorm normalises over features within one sample and is standard in Transformers. Both use learnable scale γ and shift β. RMSNorm is a cheaper variant used in LLMs.",
+      f: "x̂ = (x − μ) / √(σ² + ε),   y = γx̂ + β" },
+    { t: "Residual Connections", tags: ["architecture"],
+      d: "y = x + F(x). They give gradients a direct path back through the network, which is what makes 100+ layer networks (ResNet, Transformers) trainable." }
+  ]
+},
+{
+  id: "activations", name: "Activation Functions",
+  lead: "The non-linearities that give neural nets their expressive power. Try them in the plotter below.",
+  plotter: true,
+  items: [
+    { t: "Sigmoid", tags: ["classic"],
+      d: "Squashes input to (0, 1). Use it for binary outputs and gates. It saturates, which causes vanishing gradients, and it isn't zero-centred.",
+      f: "σ(x) = 1 / (1 + e⁻ˣ)\nσ'(x) = σ(x)(1 − σ(x))   (max 0.25)",
+      code: `def sigmoid(x): return 1 / (1 + np.exp(-x))` },
+    { t: "Tanh", tags: ["classic"],
+      d: "Squashes to (−1, 1) and is zero-centred. It still saturates. It's common in RNN and LSTM cells.",
+      f: "tanh(x) = (eˣ − e⁻ˣ)/(eˣ + e⁻ˣ)\ntanh'(x) = 1 − tanh²(x)" },
+    { t: "ReLU", tags: ["default"],
+      d: "Cheap to compute, sparse, and doesn't saturate for x > 0. It's the default for hidden layers. Neurons can 'die' and output 0 forever.",
+      f: "ReLU(x) = max(0, x)\nReLU'(x) = 1 if x > 0 else 0",
+      code: `def relu(x): return np.maximum(0, x)` },
+    { t: "Leaky ReLU / PReLU", tags: ["ReLU family"],
+      d: "A small slope for x < 0 prevents dead neurons. In PReLU the slope α is learned.",
+      f: "f(x) = x if x > 0 else αx   (α ≈ 0.01)" },
+    { t: "ELU / SELU", tags: ["ReLU family"],
+      d: "A smooth negative region pushes mean activations toward 0. SELU is self-normalising when used with LeCun initialisation.",
+      f: "ELU(x) = x if x > 0 else α(eˣ − 1)" },
+    { t: "GELU", tags: ["transformers"],
+      d: "A smooth, probabilistic ReLU that weights the input by the Gaussian CDF. It's the default in BERT and GPT.",
+      f: "GELU(x) = x · Φ(x) ≈ 0.5x(1 + tanh[√(2/π)(x + 0.044715x³)])" },
+    { t: "Swish / SiLU", tags: ["modern"],
+      d: "Smooth and non-monotonic. It often beats ReLU in deep nets and is used in EfficientNet and LLaMA's SwiGLU.",
+      f: "Swish(x) = x · σ(βx)   (SiLU: β = 1)" },
+    { t: "Softmax", tags: ["output"],
+      d: "Turns logits into a probability distribution over K classes. Use it for multi-class output. Subtract max(z) first for numerical stability.",
+      f: "softmax(z)ᵢ = e^{zᵢ} / Σⱼ e^{zⱼ}",
+      code: `def softmax(z):
+    e = np.exp(z - z.max(axis=-1, keepdims=True))
+    return e / e.sum(axis=-1, keepdims=True)` },
+    { t: "Which one to use?", tags: ["cheat sheet"],
+      d: "For hidden layers, use ReLU (or GELU/SiLU in Transformers and modern CNNs). For outputs, match the task: regression uses linear, binary uses sigmoid, multi-class uses softmax, multi-label uses sigmoid per class, and bounded outputs use tanh." }
+  ]
+},
+{
+  id: "losses", name: "Loss Functions",
+  lead: "What the model actually optimises.",
+  items: [
+    { t: "Mean Squared Error (L2)", tags: ["regression"],
+      d: "Penalises large errors quadratically. It's the MLE under Gaussian noise and is sensitive to outliers.",
+      f: "L = (1/n) Σ (y − ŷ)²" },
+    { t: "Mean Absolute Error (L1)", tags: ["regression"],
+      d: "Robust to outliers and estimates the median. Its gradient isn't smooth at 0.",
+      f: "L = (1/n) Σ |y − ŷ|" },
+    { t: "Huber / Smooth L1", tags: ["regression", "robust"],
+      d: "Quadratic near 0 and linear for large errors, so it combines the strengths of MSE and MAE.",
+      f: "L = ½e²           if |e| ≤ δ\n    δ(|e| − ½δ)   otherwise" },
+    { t: "Binary Cross-Entropy", tags: ["classification"],
+      d: "The loss for sigmoid outputs. Use BCEWithLogitsLoss in PyTorch for numerical stability.",
+      f: "L = −[y log p + (1 − y) log(1 − p)]" },
+    { t: "Categorical Cross-Entropy", tags: ["classification"],
+      d: "The loss for softmax outputs over K classes. Label smoothing replaces one-hot targets with slightly softened ones, which reduces overconfidence.",
+      f: "L = −Σₖ yₖ log pₖ" },
+    { t: "Hinge Loss", tags: ["classification", "SVM"],
+      d: "The SVM loss. It penalises points inside the margin or on the wrong side.",
+      f: "L = max(0, 1 − y · f(x)),   y ∈ {−1, +1}" },
+    { t: "Focal Loss", tags: ["imbalance"],
+      d: "Down-weights easy examples so training focuses on hard ones. It's used in object detection with extreme imbalance.",
+      f: "FL = −α(1 − p_t)^γ log(p_t)" },
+    { t: "Contrastive / Triplet / InfoNCE", tags: ["metric learning"],
+      d: "Pull similar pairs together and push dissimilar pairs apart in embedding space. This is the basis of SimCLR, CLIP and sentence embeddings.",
+      f: "Triplet: L = max(0, d(a,p) − d(a,n) + margin)" },
+    { t: "KL Divergence Loss", tags: ["distributions"],
+      d: "Matches one distribution to another. It's used in VAEs, knowledge distillation and RLHF (KL penalty).",
+      f: "KL(p‖q) = Σ p log(p/q)" }
+  ]
+},
+{
+  id: "optimizers", name: "Optimisers",
+  lead: "How the parameters get updated.",
+  items: [
+    { t: "Gradient Descent", tags: ["basics"],
+      d: "Step against the gradient. Batch GD uses all the data, SGD uses one sample, and mini-batch uses B samples, which is the standard.",
+      f: "θ ← θ − η ∇_θ L(θ)" },
+    { t: "Momentum & Nesterov", tags: ["SGD+"],
+      d: "Accumulates a velocity that smooths out oscillations and speeds progress along consistent directions. Nesterov evaluates the gradient at the look-ahead point.",
+      f: "v ← βv + ∇L\nθ ← θ − ηv" },
+    { t: "AdaGrad / RMSProp", tags: ["adaptive"],
+      d: "Per-parameter learning rates scaled by the history of squared gradients. RMSProp uses an exponential moving average so the rate doesn't decay to zero.",
+      f: "s ← ρs + (1 − ρ)g²\nθ ← θ − η g / (√s + ε)" },
+    { t: "Adam / AdamW", tags: ["adaptive", "default"],
+      d: "Momentum plus RMSProp with bias correction. It's the default for deep learning. AdamW decouples weight decay from the gradient update and is preferred for Transformers.",
+      f: "m ← β₁m + (1−β₁)g      v ← β₂v + (1−β₂)g²\nm̂ = m/(1−β₁ᵗ)          v̂ = v/(1−β₂ᵗ)\nθ ← θ − η m̂ / (√v̂ + ε)   (β₁=0.9, β₂=0.999)",
+      code: `torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.01)` },
+    { t: "Learning-Rate Schedules", tags: ["training"],
+      d: "Options include step decay, exponential decay, cosine annealing, one-cycle, and linear warmup followed by decay (the standard for Transformers). The learning rate is usually the single most important hyperparameter.",
+      code: `sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=1e-3,
+            total_steps=len(loader)*epochs)` },
+    { t: "Gradient Clipping", tags: ["stability"],
+      d: "Rescales gradients when their norm exceeds a threshold. It prevents exploding gradients in RNNs and Transformers.",
+      code: `torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)` }
+  ]
+},
+{
+  id: "regularization", name: "Regularisation",
+  lead: "Techniques that make models generalise instead of memorise.",
+  items: [
+    { t: "L1 / L2 Penalties", tags: ["weights"],
+      d: "Add a penalty on weight size to the loss. L2 (weight decay) keeps weights small, and L1 produces sparse weights.",
+      f: "L_total = L + λ‖w‖₂²   or   L + λ‖w‖₁" },
+    { t: "Dropout", tags: ["neural nets"],
+      d: "Randomly zeroes activations with probability p during training, which works like an ensemble of subnetworks. It's turned off at inference, with inverted scaling during training.",
+      code: `nn.Dropout(p=0.3)   # model.eval() disables it` },
+    { t: "Early Stopping", tags: ["training"],
+      d: "Stop training when validation loss hasn't improved for `patience` epochs and restore the best weights. It's simple and very effective." },
+    { t: "Data Augmentation", tags: ["data"],
+      d: "Create label-preserving variations. For images: flips, crops, rotations, colour jitter, Mixup, CutMix. For text: back-translation, synonym swaps. For audio: SpecAugment." },
+    { t: "Label Smoothing", tags: ["targets"],
+      d: "Replaces a one-hot target of 1 with 1−ε and spreads ε across the other classes. It reduces overconfidence and improves calibration.",
+      code: `nn.CrossEntropyLoss(label_smoothing=0.1)` },
+    { t: "Other Tricks", tags: ["misc"],
+      d: "Batch or layer norm (mild regularising effect), smaller models, ensembling, noise injection, stochastic depth, and weight averaging (SWA, EMA)." }
+  ]
+},
+{
+  id: "deep", name: "Deep Learning Architectures",
+  lead: "Specialised networks for images, sequences, and generation.",
+  items: [
+    { t: "Convolutional Neural Networks (CNN)", tags: ["vision"],
+      d: "Convolutions slide learned filters over the input, which gives local connectivity, weight sharing and translation equivariance. Pooling downsamples. Landmark models include LeNet, AlexNet, VGG, ResNet and EfficientNet.",
+      f: "out_size = (W − K + 2P) / S + 1",
+      code: `nn.Sequential(
+    nn.Conv2d(3, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU(),
+    nn.MaxPool2d(2),
+    nn.Conv2d(32, 64, 3, padding=1), nn.ReLU(),
+    nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(64, 10))` },
+    { t: "RNN, LSTM, GRU", tags: ["sequences"],
+      d: "Process sequences step by step with a hidden state. LSTMs and GRUs add gates (forget, input, output) that preserve long-range information and ease vanishing gradients. They've largely been replaced by Transformers.",
+      f: "hₜ = tanh(W_h hₜ₋₁ + W_x xₜ + b)\nLSTM: cₜ = fₜ⊙cₜ₋₁ + iₜ⊙c̃ₜ,  hₜ = oₜ⊙tanh(cₜ)" },
+    { t: "Attention", tags: ["core idea"],
+      d: "Each token builds a weighted mix of all the values, with weights set by how similar its query is to each key. Multi-head attention runs several of these in parallel subspaces.",
+      f: "Attention(Q,K,V) = softmax(QKᵀ / √d_k) V" },
+    { t: "Transformer", tags: ["architecture"],
+      d: "Blocks of self-attention plus an MLP, with residual connections and LayerNorm. Positional encodings (sinusoidal, learned or RoPE) give it a sense of order. Encoder-only models include BERT, decoder-only models include GPT and LLaMA, and encoder–decoder models include T5. It parallelises well and scales very well." },
+    { t: "Large Language Models (LLMs)", tags: ["NLP", "generative"],
+      d: "Decoder Transformers pre-trained on next-token prediction at huge scale, then instruction-tuned and aligned with RLHF or DPO. Common techniques include prompting, in-context learning, RAG, fine-tuning with LoRA/QLoRA, and quantisation.",
+      f: "P(x) = Πₜ P(xₜ | x<ₜ)" },
+    { t: "Autoencoders & VAEs", tags: ["generative", "representation"],
+      d: "An encoder compresses the input to a latent z and a decoder reconstructs it. A VAE makes the latent space a probability distribution, trained with reconstruction loss plus KL divergence. Autoencoders are used for denoising, anomaly detection and generation.",
+      f: "VAE: L = E[log p(x|z)] − KL(q(z|x) ‖ N(0, I))" },
+    { t: "GANs", tags: ["generative"],
+      d: "A generator tries to fool a discriminator in a minimax game. GANs produce sharp samples but are notoriously unstable to train (mode collapse). Well-known variants are DCGAN, StyleGAN and CycleGAN.",
+      f: "min_G max_D E[log D(x)] + E[log(1 − D(G(z)))]" },
+    { t: "Diffusion Models", tags: ["generative", "SOTA"],
+      d: "Add noise step by step during training and learn to reverse it with a denoising network. They give state-of-the-art image, audio and video generation (Stable Diffusion, DALL·E). Text prompts steer generation via classifier-free guidance." },
+    { t: "Graph Neural Networks", tags: ["graphs"],
+      d: "Message passing: each node aggregates its neighbours' features. Variants include GCN, GraphSAGE and GAT. They're used for molecules, social networks and recommendation." },
+    { t: "Transfer Learning & Fine-tuning", tags: ["practice"],
+      d: "Start from a pre-trained model (ImageNet CNN, BERT, CLIP). Freeze the backbone and train a new head, or fine-tune everything with a low learning rate. It needs far less data.",
+      code: `import torchvision.models as tvm
+m = tvm.resnet50(weights="IMAGENET1K_V2")
+for p in m.parameters(): p.requires_grad = False
+m.fc = nn.Linear(m.fc.in_features, num_classes)` }
+  ]
+},
+{
+  id: "nlp", name: "NLP & Text",
+  lead: "Turning language into numbers.",
+  items: [
+    { t: "Text Preprocessing", tags: ["pipeline"],
+      d: "Lowercasing, tokenisation, stop-word removal, stemming or lemmatisation. Modern Transformers use subword tokenisers (BPE, WordPiece, SentencePiece) and need little cleaning." },
+    { t: "Bag of Words & TF-IDF", tags: ["classic"],
+      d: "Represent documents as sparse term-count vectors. TF-IDF down-weights words that appear everywhere. TF-IDF plus logistic regression is a strong text-classification baseline.",
+      f: "tfidf(t,d) = tf(t,d) · log(N / df(t))",
+      code: `from sklearn.feature_extraction.text import TfidfVectorizer
+vec = TfidfVectorizer(ngram_range=(1, 2), min_df=2)
+X = vec.fit_transform(docs)` },
+    { t: "Word Embeddings", tags: ["representation"],
+      d: "Dense vectors in which similar meanings sit close together. Word2Vec (skip-gram, CBOW), GloVe and FastText are static. Contextual embeddings from BERT and friends change with the surrounding context.",
+      f: "king − man + woman ≈ queen" },
+    { t: "Cosine Similarity", tags: ["similarity"],
+      d: "The angle between vectors, independent of their length. It's the standard similarity measure for embeddings, semantic search and RAG.",
+      f: "cos(a, b) = a·b / (‖a‖‖b‖)" },
+    { t: "Hugging Face Quickstart", tags: ["code"],
+      d: "Pre-trained Transformers in a few lines.",
+      code: `from transformers import pipeline
+clf = pipeline("sentiment-analysis")
+clf("I love this library!")
+# [{'label': 'POSITIVE', 'score': 0.9998}]` }
+  ]
+},
+{
+  id: "rl", name: "Reinforcement Learning",
+  lead: "Learning by trial, error and reward.",
+  items: [
+    { t: "MDP Basics", tags: ["theory"],
+      d: "A Markov Decision Process has states S, actions A, a transition function P(s'|s,a), a reward R and a discount γ. The goal is a policy π that maximises expected return.",
+      f: "V^π(s) = E[Σ γᵗ rₜ | s₀ = s]\nQ^π(s,a) = E[Σ γᵗ rₜ | s₀ = s, a₀ = a]" },
+    { t: "Bellman Equation", tags: ["theory"],
+      d: "A recursive relation for value functions. Dynamic programming, TD learning and Q-learning are all built on it.",
+      f: "Q*(s,a) = E[r + γ max_a' Q*(s', a')]" },
+    { t: "Q-Learning & DQN", tags: ["value-based"],
+      d: "An off-policy TD method that learns Q values. DQN approximates Q with a neural net and uses a replay buffer and a target network. Exploration uses ε-greedy.",
+      f: "Q(s,a) ← Q(s,a) + α[r + γ max Q(s',·) − Q(s,a)]" },
+    { t: "Policy Gradients, Actor–Critic, PPO", tags: ["policy-based"],
+      d: "Optimise the policy directly. REINFORCE uses returns. Actor–Critic adds a learned value baseline. PPO clips updates for stability and is the workhorse behind RLHF.",
+      f: "∇J(θ) = E[∇ log π_θ(a|s) · A(s,a)]" },
+    { t: "Exploration vs Exploitation", tags: ["concept"],
+      d: "Balance trying new actions against using what's already known. Strategies include ε-greedy, softmax/Boltzmann, UCB, Thompson sampling and curiosity bonuses." }
+  ]
+},
+{
+  id: "timeseries", name: "Time Series",
+  lead: "Data where order matters.",
+  items: [
+    { t: "Components & Stationarity", tags: ["theory"],
+      d: "A series is made of trend, seasonality, cycles and noise. Many models need stationarity (constant mean and variance). Test with ADF and fix with differencing or log transforms." },
+    { t: "ARIMA / SARIMA", tags: ["classic"],
+      d: "AutoRegressive (p) + Integrated/differencing (d) + Moving Average (q) terms. SARIMA adds seasonal terms. Choose p and q from ACF and PACF plots.",
+      code: `from statsmodels.tsa.arima.model import ARIMA
+m = ARIMA(series, order=(2, 1, 2)).fit()
+m.forecast(steps=12)` },
+    { t: "ML for Forecasting", tags: ["modern"],
+      d: "Build lag, rolling and calendar features, then use gradient boosting. Other options are Prophet, N-BEATS, Temporal Fusion Transformer and foundation models. Always validate with time-ordered splits." }
+  ]
+},
+{
+  id: "interpret", name: "Interpretability & Ethics",
+  lead: "Understanding models and using them responsibly.",
+  items: [
+    { t: "Feature Importance", tags: ["global"],
+      d: "Tree impurity importance is biased toward high-cardinality features. Permutation importance is model-agnostic and more reliable.",
+      code: `from sklearn.inspection import permutation_importance
+r = permutation_importance(model, X_te, y_te, n_repeats=10)` },
+    { t: "SHAP", tags: ["local + global"],
+      d: "Shapley values from game theory give each feature's contribution to a single prediction. The values are consistent and add up to the output.",
+      code: `import shap
+explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(X_te)
+shap.summary_plot(shap_values, X_te)` },
+    { t: "LIME, PDP & ICE", tags: ["explain"],
+      d: "LIME fits a local surrogate model around one prediction. Partial dependence plots show the average effect of a feature. ICE plots show per-sample curves." },
+    { t: "Fairness & Bias", tags: ["ethics"],
+      d: "Models can reproduce bias from their training data. Measure demographic parity, equalised odds and calibration per group. Audit your data, document it with datasheets and model cards, and include diverse stakeholders." },
+    { t: "Privacy & Security", tags: ["ethics"],
+      d: "Risks include PII leakage, membership inference and adversarial examples. Mitigations include differential privacy, federated learning, adversarial training and red-teaming." }
+  ]
+},
+{
+  id: "mlops", name: "MLOps & Deployment",
+  lead: "Getting models into production and keeping them healthy.",
+  items: [
+    { t: "Saving & Loading Models", tags: ["serialisation"],
+      d: "Use joblib or pickle for sklearn, state_dict for PyTorch, and ONNX for cross-framework inference.",
+      code: `import joblib
+joblib.dump(pipe, "model.joblib"); pipe = joblib.load("model.joblib")
+torch.save(model.state_dict(), "model.pt")` },
+    { t: "Serving", tags: ["deployment"],
+      d: "Wrap the model in a REST API (FastAPI or Flask), containerise it with Docker, and scale with Kubernetes or serverless. Batch scoring works for offline use cases.",
+      code: `from fastapi import FastAPI
+app = FastAPI()
+@app.post("/predict")
+def predict(features: dict):
+    return {"pred": float(pipe.predict(pd.DataFrame([features]))[0])}` },
+    { t: "Experiment Tracking", tags: ["tooling"],
+      d: "Log parameters, metrics, artefacts and data versions with MLflow, Weights & Biases or DVC. Seed everything so runs are reproducible." },
+    { t: "Monitoring & Drift", tags: ["production"],
+      d: "Data drift is a change in P(x). Concept drift is a change in P(y|x). Monitor input distributions (PSI, KS test), prediction distributions, latency and delayed ground truth. Retrain on a schedule or when alerts fire." },
+    { t: "Model Compression", tags: ["efficiency"],
+      d: "Quantisation (FP16, INT8, 4-bit), pruning, knowledge distillation (a small student learns from a large teacher) and efficient architectures cut latency and cost." }
+  ]
+},
+{
+  id: "tools", name: "Libraries & Tools",
+  lead: "The Python ML ecosystem at a glance.",
+  items: [
+    { t: "NumPy & Pandas", tags: ["data"],
+      d: "NumPy provides n-dimensional arrays, vectorised math and linear algebra. Pandas provides DataFrames for loading, cleaning, grouping, joining and reshaping tabular data." },
+    { t: "Matplotlib & Seaborn", tags: ["viz"],
+      d: "Matplotlib is the low-level plotting layer. Seaborn provides statistical plots with nice defaults: histplot, boxplot, violinplot, pairplot, heatmap, regplot and FacetGrid.",
+      code: `import seaborn as sns, matplotlib.pyplot as plt
+sns.set_theme(style="whitegrid")
+sns.histplot(df, x="age", hue="target", kde=True)
+sns.boxplot(data=df, x="class", y="price")
+plt.show()` },
+    { t: "scikit-learn", tags: ["classic ML"],
+      d: "Every model follows the same API: fit / predict / transform. The library also covers preprocessing, model selection, pipelines and metrics. It's the go-to for classic ML." },
+    { t: "PyTorch / TensorFlow / JAX", tags: ["deep learning"],
+      d: "PyTorch is the default for research and much of industry, with dynamic graphs. TensorFlow/Keras is strong in production and mobile. JAX gives NumPy-style code with autodiff, JIT compilation and vectorisation." },
+    { t: "XGBoost, LightGBM, CatBoost", tags: ["boosting"],
+      d: "Gradient-boosted trees, which win on most tabular problems." },
+    { t: "Hugging Face, spaCy, NLTK", tags: ["NLP"],
+      d: "Transformers, Datasets, Tokenizers and PEFT (LoRA) from Hugging Face. spaCy for fast production NLP pipelines. NLTK for classic NLP teaching tools." },
+    { t: "statsmodels, Optuna, MLflow, SHAP", tags: ["utilities"],
+      d: "statsmodels for statistical tests, regression summaries and ARIMA. Optuna for hyperparameter search. MLflow for tracking and registry. SHAP for explanations." }
+  ]
+}
+];
+
+/* Quick-reference table: which algorithm when */
+const CHEAT = [
+  ["Tabular classification / regression", "Gradient boosting (LightGBM, XGBoost)", "Logistic / linear regression, Random Forest"],
+  ["Small data, need interpretability", "Logistic regression, shallow decision tree", "GAMs, rule lists"],
+  ["Text classification", "Fine-tuned Transformer (BERT)", "TF-IDF + Logistic Regression"],
+  ["Images", "Pre-trained CNN / ViT + fine-tuning", "Small CNN from scratch"],
+  ["Sequences / generation", "Transformer / LLM", "LSTM / GRU"],
+  ["Clustering, round blobs", "k-Means", "GMM"],
+  ["Clustering, arbitrary shapes + noise", "DBSCAN / HDBSCAN", "Spectral clustering"],
+  ["Visualise high-dim data", "UMAP / t-SNE", "PCA (first)"],
+  ["Anomaly detection", "Isolation Forest", "Autoencoder, One-Class SVM"],
+  ["Forecasting", "Gradient boosting with lag features", "ARIMA / Prophet"],
+  ["Sequential decisions", "PPO / DQN", "Multi-armed bandits"]
+];
+
+/* Glossary */
+const GLOSSARY = [
+  ["Epoch", "One full pass over the training data."],
+  ["Batch size", "Number of samples per gradient update."],
+  ["Learning rate (η)", "Step size of each parameter update."],
+  ["Hyperparameter", "A setting chosen before training (k, depth, η), not learned from data."],
+  ["Logit", "Raw, unnormalised model output before sigmoid or softmax."],
+  ["Embedding", "Dense learned vector representation of a discrete item."],
+  ["Inference", "Using a trained model to make predictions."],
+  ["Ground truth", "The true label or target value."],
+  ["Baseline", "A simple reference model that any real model must beat."],
+  ["Latent space", "A learned lower-dimensional representation."],
+  ["Token", "A unit of text (word or subword) a language model processes."],
+  ["Fine-tuning", "Continuing to train a pre-trained model on task-specific data."],
+  ["Zero/few-shot", "Solving a task with no or only a few labelled examples."],
+  ["Ablation", "Removing a component to measure how much it contributes."],
+  ["SOTA", "State of the art: the best reported result."]
+];
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const main = document.getElementById("main");
+const nav = document.getElementById("nav");
+
+function cardHTML(it) {
+  let h = `<article class="card"><h3>${esc(it.t)}</h3>`;
+  if (it.tags) h += `<div class="tags">${it.tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}</div>`;
+  h += `<p>${esc(it.d)}</p>`;
+  if (it.f) h += `<div class="formula">${esc(it.f)}</div>`;
+  if (it.pros || it.cons) {
+    h += `<div class="pc"><div><b class="good">Pros</b><ul>${(it.pros || []).map(p => `<li>${esc(p)}</li>`).join("")}</ul></div>` +
+         `<div><b class="bad">Cons</b><ul>${(it.cons || []).map(p => `<li>${esc(p)}</li>`).join("")}</ul></div></div>`;
+  }
+  if (it.code) h += `<details><summary>Python</summary><pre><code>${esc(it.code)}</code></pre></details>`;
+  return h + `</article>`;
+}
+
+function build() {
+  let navH = "";
+  LIB.forEach(sec => {
+    navH += `<a href="#${sec.id}" data-nav="${sec.id}">${sec.name} <small>${sec.items.length}</small></a>`;
+    const s = document.createElement("section");
+    s.id = sec.id;
+    s.innerHTML = `<h2>${sec.name}</h2><p class="lead">${esc(sec.lead)}</p>` +
+      (sec.plotter ? plotterHTML() : "") +
+      `<div class="grid">${sec.items.map(cardHTML).join("")}</div>`;
+    s.querySelectorAll(".card").forEach((c, i) => c._text = JSON.stringify(sec.items[i]).toLowerCase() + " " + sec.name.toLowerCase());
+    main.appendChild(s);
+  });
+
+  // cheat sheet + glossary
+  navH += `<a href="#cheatsheet">Which algorithm? <small>${CHEAT.length}</small></a><a href="#glossary">Glossary <small>${GLOSSARY.length}</small></a>`;
+  const cs = document.createElement("section");
+  cs.id = "cheatsheet"; cs.className = "static";
+  cs.innerHTML = `<h2>Which algorithm when?</h2><p class="lead">A starting point, not a rule. Always compare against a simple baseline.</p>
+    <div class="table-wrap"><table><thead><tr><th>Problem</th><th>Try first</th><th>Alternatives / baseline</th></tr></thead>
+    <tbody>${CHEAT.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  main.appendChild(cs);
+
+  const gl = document.createElement("section");
+  gl.id = "glossary"; gl.className = "static";
+  gl.innerHTML = `<h2>Glossary</h2><p class="lead">Quick definitions of common terms.</p>
+    <div class="table-wrap"><table><tbody>${GLOSSARY.map(([k, v]) => `<tr><td><b>${esc(k)}</b></td><td>${esc(v)}</td></tr>`).join("")}</tbody></table></div>`;
+  main.appendChild(gl);
+
+  nav.innerHTML = navH;
+}
+
+/* =========================================================================
+   SEARCH
+   ========================================================================= */
+const search = document.getElementById("search");
+const countEl = document.getElementById("count");
+const total = LIB.reduce((n, s) => n + s.items.length, 0);
+
+function filter() {
+  const q = search.value.trim().toLowerCase();
+  let shown = 0;
+  document.querySelectorAll("main section:not(.static)").forEach(sec => {
+    let secShown = 0;
+    sec.querySelectorAll(".card").forEach(c => {
+      const hit = !q || q.split(/\s+/).every(w => c._text.includes(w));
+      c.style.display = hit ? "" : "none";
+      if (hit) secShown++;
+    });
+    sec.style.display = secShown ? "" : "none";
+    const link = nav.querySelector(`[data-nav="${sec.id}"]`);
+    if (link) { link.style.display = secShown ? "" : "none"; link.querySelector("small").textContent = secShown; }
+    shown += secShown;
+  });
+  document.querySelectorAll("main section.static").forEach(s => s.style.display = q ? "none" : "");
+  document.getElementById("empty").style.display = shown ? "none" : "block";
+  countEl.textContent = q ? `${shown} / ${total} topics` : `${total} topics`;
+}
+search.addEventListener("input", filter);
+document.addEventListener("keydown", e => {
+  if (e.key === "/" && document.activeElement !== search) { e.preventDefault(); search.focus(); }
+  if (e.key === "Escape") { search.value = ""; filter(); search.blur(); }
+});
+
+/* expand / collapse all code */
+let expanded = false;
+document.getElementById("expand").onclick = e => {
+  expanded = !expanded;
+  document.querySelectorAll("details").forEach(d => d.open = expanded);
+  e.target.textContent = expanded ? "Collapse code" : "Expand code";
+};
+
+/* theme toggle */
+const root = document.documentElement;
+try { const t = localStorage.getItem("ml-lib-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").onclick = () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("ml-lib-theme", root.dataset.theme); } catch (e) {}
+  drawPlot();
+};
+
+/* =========================================================================
+   ACTIVATION FUNCTION PLOTTER
+   ========================================================================= */
+const sig = x => 1 / (1 + Math.exp(-x));
+const erf = x => { // Abramowitz–Stegun approximation
+  const s = Math.sign(x); x = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * x);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+  return s * y;
+};
+const ACTS = {
+  Sigmoid:   { f: sig, c: "#e0663a" },
+  Tanh:      { f: Math.tanh, c: "#2f9e6e" },
+  ReLU:      { f: x => Math.max(0, x), c: "#4a6fe3" },
+  LeakyReLU: { f: x => x > 0 ? x : 0.1 * x, c: "#9b59d0" },
+  ELU:       { f: x => x > 0 ? x : Math.exp(x) - 1, c: "#c9a227" },
+  GELU:      { f: x => 0.5 * x * (1 + erf(x / Math.SQRT2)), c: "#d0457d" },
+  Swish:     { f: x => x * sig(x), c: "#1a9bb0" },
+  Softplus:  { f: x => Math.log1p(Math.exp(x)), c: "#8a7f6c" }
+};
+const active = new Set(["Sigmoid", "ReLU", "GELU"]);
+let showDeriv = false;
+
+function plotterHTML() {
+  return `<div class="plotter" style="margin-bottom:12px">
+    <div class="controls">${Object.keys(ACTS).map(k =>
+      `<button data-act="${k}" class="${active.has(k) ? "on" : ""}">${k}</button>`).join("")}
+      <button id="deriv">Show derivative f′(x)</button></div>
+    <canvas id="plot"></canvas>
+    <div class="legend" id="legend"></div></div>`;
+}
+
+function drawPlot() {
+  const cv = document.getElementById("plot");
+  if (!cv) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext("2d");
+  ctx.scale(dpr, dpr);
+  const css = getComputedStyle(root);
+  const ink = css.getPropertyValue("--muted").trim(), line = css.getPropertyValue("--line").trim();
+  const xr = [-5, 5], yr = showDeriv ? [-0.5, 1.5] : [-1.5, 3];
+  const X = x => (x - xr[0]) / (xr[1] - xr[0]) * W;
+  const Y = y => H - (y - yr[0]) / (yr[1] - yr[0]) * H;
+  ctx.clearRect(0, 0, W, H);
+  // grid
+  ctx.strokeStyle = line; ctx.lineWidth = 1; ctx.font = "11px sans-serif"; ctx.fillStyle = ink;
+  for (let x = Math.ceil(xr[0]); x <= xr[1]; x++) { ctx.beginPath(); ctx.moveTo(X(x), 0); ctx.lineTo(X(x), H); ctx.stroke(); if (x) ctx.fillText(x, X(x) + 3, Y(0) - 4); }
+  for (let y = Math.ceil(yr[0] * 2) / 2; y <= yr[1]; y += 0.5) { ctx.beginPath(); ctx.moveTo(0, Y(y)); ctx.lineTo(W, Y(y)); ctx.stroke(); if (y) ctx.fillText(y, X(0) + 4, Y(y) - 3); }
+  // axes
+  ctx.strokeStyle = ink; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(0, Y(0)); ctx.lineTo(W, Y(0)); ctx.moveTo(X(0), 0); ctx.lineTo(X(0), H); ctx.stroke();
+  // curves
+  const h = 1e-3;
+  active.forEach(k => {
+    const { f, c } = ACTS[k];
+    const g = showDeriv ? (x => (f(x + h) - f(x - h)) / (2 * h)) : f;
+    ctx.strokeStyle = c; ctx.lineWidth = 2.2; ctx.beginPath();
+    for (let px = 0; px <= W; px++) {
+      const x = xr[0] + px / W * (xr[1] - xr[0]);
+      const py = Y(g(x));
+      px ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.stroke();
+  });
+  document.getElementById("legend").innerHTML = [...active].map(k =>
+    `<span style="color:${ACTS[k].c};font-weight:600">■ ${k}</span>`).join(" &nbsp; ") +
+    (showDeriv ? " &nbsp;— showing derivatives (numerical)" : "");
+}
+
+function wirePlotter() {
+  document.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
+    const k = b.dataset.act;
+    active.has(k) ? active.delete(k) : active.add(k);
+    b.classList.toggle("on");
+    drawPlot();
+  });
+  const d = document.getElementById("deriv");
+  d.onclick = () => { showDeriv = !showDeriv; d.classList.toggle("on", showDeriv); drawPlot(); };
+  window.addEventListener("resize", drawPlot);
+}
+
+build();
+filter();
+wirePlotter();
+drawPlot();
+</script>
+</body>
+</html>
