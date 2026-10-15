@@ -23,7 +23,7 @@ This repository is a joint deep-dive into *why* activation functions matter, not
 - Hands-on implementation, both from scratch (plain Python/NumPy) and with `nn` built-ins
 - Visualising function curves and their derivatives side by side
 
-## Scope
+## ## Scope
 
 Exploration spans the ~400 activation functions available in `torch.nn` and related libraries, prioritised by relevance and common usage rather than exhaustive coverage of every variant. The Nonlinearity Index tracks progress toward that number.
 
