@@ -39,7 +39,7 @@ USE_CASES = [
          picks=[("swiglu", "default in most open LLMs"), ("geglu", "common alternative"), ("gelu", "BERT/GPT-2 era default"),
                 ("gelu-tanh", "fast GELU"), ("squared-relu", "efficient alternative"), ("relu", "original Transformer")],
          props=["gating", "smooth"],
-         why="The feed-forward blocks hold most of a Transformer's parameters, so their activation matters. Smooth, self-gated units such as GELU beat ReLU slightly, and multiplicative GLU gates (SwiGLU, GEGLU) lower perplexity further at equal compute: the gate lets each hidden unit scale its value path by an input-dependent amount. Gating matters more than smoothness here, since Squared ReLU is also competitive.",
+         why="The feed-forward blocks hold most of a Transformer's parameters, so their activation matters. Smooth, self-gated units such as GELU beat ReLU slightly, and multiplicative GLU gates (SwiGLU, GEGLU) lower perplexity further at equal compute: the gate lets each hidden unit scale its value path by an input-dependent amount. Gating helps most, though Squared ReLU, which has no gate, is also competitive, so the gain isn't only about gating.",
          caveat="GLU variants use three weight matrices instead of two; shrink the hidden size to about 2/3 to keep the parameter count equal.",
          examples="LLaMA, PaLM, Mistral (SwiGLU) · T5 v1.1, Gemma (GEGLU) · BERT, GPT-2 (GELU)"),
     dict(slug="attention", title="Attention weights", area="Language",

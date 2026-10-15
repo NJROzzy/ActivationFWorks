@@ -10,7 +10,7 @@ Both sites are static and hosted on Vercel.
 
 | Site | What it is | Source |
 | --- | --- | --- |
-| [**The Nonlinearity Index**](https://nonlinearity-index.vercel.app) | A catalogue of activation functions: formula, behaviour, and a plot of each curve and its derivative, organised by family. Includes a [use-case guide](https://nonlinearity-index.vercel.app/use-cases) to which functions get chosen for which tasks and why. 85 functions so far, growing toward ≈400. | [`NJRProjects/NonlinearityIndex/`](NJRProjects/NonlinearityIndex/) |
+| [**The Nonlinearity Index**](https://nonlinearity-index.vercel.app) | A catalogue of activation functions: formula, behaviour, and a plot of each curve and its derivative, organised by family. Includes a [use-case guide](https://nonlinearity-index.vercel.app/use-cases) to which functions get chosen for which tasks and why. 374 functions, most of them taken from the Kunc & Kléma (2024) survey and checked against its formulas. | [`NJRProjects/NonlinearityIndex/`](NJRProjects/NonlinearityIndex/) |
 | [**Neural Atlas**](https://neural-atlas-ten.vercel.app) | A field guide to Machine Learning, Deep Learning and Reinforcement Learning: about 195 topics with formulas and code, three interactive labs, and a Python playground that runs 26 example programs in the browser. | [`NJRProjects/ML/main.html`](NJRProjects/ML/main.html) |
 
 ## Purpose

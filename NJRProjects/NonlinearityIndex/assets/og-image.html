@@ -1,0 +1,54 @@
+<!doctype html>
+<!-- Source for public/og-image.png (1200×630 link-preview image). Regenerate with:
+     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars \
+       --window-size=1200,630 --virtual-time-budget=5000 --screenshot=public/og-image.png assets/og-image.html -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600&family=Geist+Mono:wght@400&family=STIX+Two+Text:ital@1&display=swap">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #121212; color: #ececec; font-family: Geist, sans-serif; }
+  .wrap { position: relative; width: 1200px; height: 630px; box-sizing: border-box; padding: 72px 80px; }
+  .eyebrow { font: 400 20px "Geist Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: #8a8a8a; }
+  h1 { font-size: 76px; font-weight: 600; letter-spacing: -.03em; line-height: 1.02; margin: 26px 0 18px; max-width: 640px; }
+  p { font-size: 32px; color: #c4c4c4; margin: 0; max-width: 560px; line-height: 1.35; }
+  .sub2 { font-size: 24px; color: #8a8a8a; margin-top: 14px; }
+  .phi { color: #8b96ff; font-family: "STIX Two Text", serif; font-style: italic; }
+  .foot { position: absolute; left: 80px; bottom: 64px; font: 400 20px "Geist Mono", monospace; color: #6b6b6b; }
+  svg { position: absolute; right: 56px; top: 96px; width: 480px; height: 420px; }
+  .grid { stroke: #222; stroke-width: 1.5; }
+  .axis { stroke: #3a3a3a; stroke-width: 2; }
+  .curve { fill: none; stroke: #8b96ff; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+  .deriv { fill: none; stroke: #8a8a8a; stroke-width: 3; stroke-dasharray: 10 8; }
+  .lbl { font: italic 30px "STIX Two Text", serif; fill: #8b96ff; }
+  .lbl2 { font: italic 24px "STIX Two Text", serif; fill: #8a8a8a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Deep learning reference</div>
+  <h1>The Nonlinearity Index</h1>
+  <p>A catalogue of activation functions</p>
+  <p class="sub2">Formulas, curves and derivatives for <span class="phi">φ</span>(<i>x</i>)</p>
+  <div class="foot">nonlinearity-index.vercel.app</div>
+  <svg viewBox="0 0 480 420" id="plot"></svg>
+</div>
+<script>
+  // GELU(x) = x · Φ(x) and its derivative, drawn on x ∈ [−4, 3]
+  const erf = x => { const s = Math.sign(x); x = Math.abs(x); const t = 1 / (1 + 0.3275911 * x);
+    return s * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x)); };
+  const Phi = x => 0.5 * (1 + erf(x / Math.SQRT2)), phi = x => Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI);
+  const f = x => x * Phi(x), df = x => Phi(x) + x * phi(x);
+  const [x0, x1, y0, y1] = [-4, 3, -0.8, 3.2];
+  const X = x => 20 + (x - x0) / (x1 - x0) * 440, Y = y => 400 - (y - y0) / (y1 - y0) * 380;
+  const path = g => { let d = ""; for (let i = 0; i <= 200; i++) { const x = x0 + (x1 - x0) * i / 200; d += (i ? "L" : "M") + X(x).toFixed(1) + " " + Y(g(x)).toFixed(1); } return d; };
+  let s = "";
+  for (let x = -3; x <= 3; x++) if (x) s += `<line class="grid" x1="${X(x)}" x2="${X(x)}" y1="20" y2="400"/>`;
+  for (let y = 1; y <= 3; y++) s += `<line class="grid" x1="20" x2="460" y1="${Y(y)}" y2="${Y(y)}"/>`;
+  s += `<line class="axis" x1="20" x2="460" y1="${Y(0)}" y2="${Y(0)}"/><line class="axis" x1="${X(0)}" x2="${X(0)}" y1="20" y2="400"/>`;
+  s += `<path class="deriv" d="${path(df)}"/><path class="curve" d="${path(f)}"/>`;
+  s += `<text class="lbl" x="${X(0.15)}" y="${Y(2.55)}">GELU(x)</text><text class="lbl2" x="${X(2.1)}" y="${Y(0.62)}">f′(x)</text>`;
+  document.getElementById("plot").innerHTML = s;
+</script>
+</body>
+</html>

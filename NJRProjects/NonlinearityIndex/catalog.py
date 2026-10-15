@@ -86,8 +86,15 @@ FAMILIES = [
     ("self-gated", "modern", "Smooth self-gated", "x multiplied by a smooth gate of itself (GELU, SiLU, Mish) and their cheaper approximations."),
     ("glu", "modern", "Gated linear units", "Two projections, one gating the other. GLU variants are plotted with both halves tied to the same input, i.e. x · g(x)."),
     ("learned", "modern", "Learned & adaptive", "Activations with trainable parameters, so every neuron or channel can learn its own shape. Plots show example parameter values."),
+    ("adaptive-rectifiers", "modern", "Adaptive rectifiers", "ReLU-shaped functions with trainable slopes, thresholds or saturation levels. Plots use example or initial parameter values."),
+    ("adaptive-sigmoidal", "modern", "Adaptive sigmoidal", "Sigmoid- and tanh-shaped functions whose steepness, offset or bounds are learned."),
+    ("adaptive-self-gated", "modern", "Adaptive self-gated", "Swish-style units, x times a gate, with trainable gate parameters."),
+    ("adaptive-frameworks", "modern", "Rational, fractional & other adaptive families", "General recipes for learnable activations: rational functions, fractional derivatives, blends of basis functions and other parameterised families."),
     ("periodic", "research", "Periodic & radial", "Oscillating and bump-shaped functions used for implicit representations, periodic signals and RBF networks."),
+    ("sigmoid-variants", "research", "Sigmoid variants", "Reshaped, shifted, cascaded and piecewise versions of the logistic sigmoid and tanh."),
+    ("relu-variants", "research", "Rectifier variants", "Fixed (non-learned) modifications of ReLU: different negative branches, caps, shifts and smoothings."),
     ("swish-descendants", "research", "Swish & Mish descendants", "Variations on self-gating proposed since 2018, mostly evaluated on image classification benchmarks."),
+    ("algebraic", "research", "Polynomial, algebraic & logarithmic", "Activations built from powers, roots, logarithms and exponentials rather than sigmoids or rectifiers."),
     ("other-research", "research", "Other research functions", "One-off proposals and specialised activations that are worth knowing about."),
 ]
 
@@ -114,8 +121,8 @@ fn("sigmoid", "Sigmoid", "sigmoidal", sig, "σ(x) = 1 / (1 + e<sup>−x</sup>)",
    "Squashes any input into (0, 1), so it reads as a probability. It saturates for large |x| and its gradient peaks at 0.25, which made deep sigmoid networks hard to train. Still the standard choice for binary outputs and LSTM/GRU gates.",
    "(0, 1)", True, aka="Logistic", torch="nn.Sigmoid")
 fn("tanh", "Tanh", "sigmoidal", math.tanh, "tanh(x) = (e<sup>x</sup> − e<sup>−x</sup>) / (e<sup>x</sup> + e<sup>−x</sup>)",
-   "A rescaled sigmoid (tanh x = 2σ(2x) − 1) that is zero-centred, which helps optimisation. It saturates like the sigmoid. Standard for recurrent hidden states and for squashing bounded outputs.",
-   "(−1, 1)", True, aka="Hyperbolic tangent", torch="nn.Tanh")
+   "A rescaled sigmoid (tanh x = 2σ(2x) − 1) that is zero-centred but saturating: its gradient peaks at 1 at x = 0 and vanishes for large |x|. Used for the LSTM/GRU candidate state, PPO hidden layers, GAN generator outputs and physics-informed networks.",
+   "(−1, 1)", True, aka="Hyperbolic tangent", torch="nn.Tanh", src="LeCun et al., 1998 (Efficient BackProp)")
 fn("lecun-tanh", "LeCun tanh", "sigmoidal", lambda x: 1.7159 * math.tanh(2 * x / 3), "f(x) = 1.7159 · tanh(2x / 3)",
    "Tanh rescaled so that f(±1) = ±1, which keeps unit-variance inputs at roughly unit variance and keeps the units away from saturation.",
    "(−1.7159, 1.7159)", True, aka="Scaled tanh", src="LeCun et al., 1998")
@@ -238,32 +245,32 @@ fn("entmax15", "1.5-entmax", "output", entmax15_2,
    "[0, 1], sums to 1", True, aka="Entmax", src="Peters et al., 2019", note="p₁ for two classes, x = z₁ − z₂")
 fn("exponential", "Exponential", "output", math.exp, "f(x) = e<sup>x</sup>",
    "Maps to strictly positive values. Used as an output for rates and scale parameters (a Poisson intensity, a standard deviation); its unbounded growth makes it unstable in hidden layers.",
-   "(0, ∞)", True, xr=(-4, 2.5))
+   "(0, ∞)", True, torch="exp", xr=(-4, 2.5))
 
 # ================================================================ MODERN & LEARNED
 # ---------------------------------------------------------------- smooth self-gated
 fn("gelu", "GELU", "self-gated", gelu, "f(x) = x · Φ(x)",
    "Weights each input by the probability that a standard normal variable falls below it. It's smooth and dips slightly below zero (minimum ≈ −0.17 near x = −0.75). The default in BERT, GPT-2/3 and most Transformers before GLU variants took over.",
-   "≈ [−0.17, ∞)", True, aka="Gaussian error linear unit", torch="nn.GELU", src="Hendrycks & Gimpel, 2016")
+   None, True, aka="Gaussian error linear unit", torch="nn.GELU", src="Hendrycks & Gimpel, 2016")
 fn("gelu-tanh", "GELU (tanh approximation)", "self-gated",
    lambda x: 0.5 * x * (1 + math.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * x ** 3))),
    "f(x) = ½x [1 + tanh(√(2/π) (x + 0.044715x³))]",
    "The fast approximation used in the original BERT and GPT-2 code. It's visually indistinguishable from exact GELU; pick whichever the pretrained weights you load were trained with.",
-   "≈ [−0.17, ∞)", True, torch="nn.GELU(approximate='tanh')", src="Hendrycks & Gimpel, 2016")
+   None, True, torch="nn.GELU(approximate='tanh')", src="Hendrycks & Gimpel, 2016")
 fn("quick-gelu", "QuickGELU", "self-gated", lambda x: x * sig(1.702 * x), "f(x) = x · σ(1.702x)",
    "A cheaper sigmoid-based approximation of GELU. OpenAI's CLIP models were trained with it, so loading their weights means using it too.",
-   "≈ [−0.16, ∞)", True, aka="Sigmoid GELU approximation", src="Hendrycks & Gimpel, 2016; Radford et al., 2021 (CLIP)")
+   None, True, aka="Sigmoid GELU approximation", src="Hendrycks & Gimpel, 2016; Radford et al., 2021 (CLIP)")
 fn("silu", "SiLU / Swish", "self-gated", silu, "f(x) = x · σ(x)",
    "The input multiplied by its own sigmoid. Smooth and non-monotonic, with a minimum of about −0.28 at x ≈ −1.28. Used in EfficientNet, the YOLO family and most diffusion-model U-Nets.",
-   "≈ [−0.28, ∞)", True, aka="Swish-1, sigmoid-weighted linear unit", torch="nn.SiLU",
+   None, True, aka="Swish-1, sigmoid-weighted linear unit", torch="nn.SiLU",
    src="Elfwing et al., 2017; Ramachandran et al., 2017")
 fn("hard-swish", "Hard swish", "self-gated", lambda x: x * relu6(x + 3) / 6,
    [("0", "x ≤ −3"), ("x(x + 3) / 6", "−3 < x < 3"), ("x", "x ≥ 3")],
    "A piecewise-polynomial approximation of Swish with no exponentials, so it runs fast on mobile CPUs and quantises well. Introduced in MobileNetV3.",
-   "≈ [−0.375, ∞)", False, aka="h-swish", torch="nn.Hardswish", src="Howard et al., 2019", xr=(-5, 4))
+   None, False, aka="h-swish", torch="nn.Hardswish", src="Howard et al., 2019", xr=(-5, 4))
 fn("mish", "Mish", "self-gated", lambda x: x * math.tanh(softplus(x)), "f(x) = x · tanh(softplus(x))",
    "Smooth and non-monotonic, unbounded above and bounded below (minimum ≈ −0.31). Very similar to Swish with a slightly deeper negative lobe. Used in the YOLOv4 backbone.",
-   "≈ [−0.31, ∞)", True, torch="nn.Mish", src="Misra, 2019")
+   None, True, torch="nn.Mish", src="Misra, 2019")
 fn("squareplus", "Squareplus", "self-gated", lambda x: (x + math.sqrt(x * x + 4)) / 2, "f(x) = (x + √(x² + b)) / 2",
    "An algebraic softplus: no exponentials or logarithms, so it's fast and numerically simple. b controls the curvature near zero (b = 4 plotted).",
    "(0, ∞)", True, src="Barron, 2021")
@@ -291,8 +298,8 @@ fn("reglu", "ReGLU", "glu", lambda x: x * relu(x), "ReGLU(a, b) = a ⊗ ReLU(b)"
 fn("geglu", "GEGLU", "glu", lambda x: x * gelu(x), "GEGLU(a, b) = a ⊗ GELU(b)",
    "GLU with a GELU gate. Used in T5 v1.1, Gemma and other Transformer language models.",
    "(−∞, ∞)", True, src="Shazeer, 2020", mono=False, xr=(-3, 3))
-fn("swiglu", "SwiGLU", "glu", lambda x: x * silu(x), "SwiGLU(a, b) = a ⊗ Swish(b)",
-   "The feed-forward activation of PaLM, LLaMA and most open LLMs. Because it needs three weight matrices instead of two, the hidden size is usually cut to about 2/3 to keep the parameter count equal.",
+fn("swiglu", "SwiGLU", "glu", lambda x: x * silu(x), "SwiGLU(a, b) = a ⊗ SiLU(b) = a ⊗ (b · σ(b))",
+   "The feed-forward activation of LLaMA, PaLM, Mistral and most open LLMs. Because it needs three weight matrices instead of two, the hidden size is usually cut to about 2/3 to keep the parameter count equal.",
    "(−∞, ∞)", True, src="Shazeer, 2020", mono=False, xr=(-3, 3))
 fn("gated-tanh", "Gated tanh unit", "glu", lambda x: math.tanh(x) * sig(x), "f(a, b) = tanh(a) ⊗ σ(b)",
    "A bounded tanh 'content' path modulated by a sigmoid gate. The activation inside WaveNet and gated PixelCNN for audio and image generation.",
@@ -338,7 +345,7 @@ fn("acon-c", "ACON-C", "learned", lambda x: 0.75 * x * sig(0.75 * x) + 0.25 * x,
 fn("pau", "Padé activation unit", "learned", pau,
    "f(x) = P(x) / (1 + |Σ<sub>k</sub> b<sub>k</sub>x<sup>k</sup>|)",
    "A learnable rational function (a ratio of polynomials) whose denominator can't reach zero. It can closely approximate standard activations or learn new shapes. Plotted with example coefficients.",
-   "learned", True, aka="PAU, rational activation", src="Molina et al., 2020", note="example coefficients")
+   "learned", False, aka="PAU, rational activation", src="Molina et al., 2020", note="example coefficients")
 fn("soft-exponential", "Soft exponential", "learned",
    [("α = −0.5", soft_exp(-0.5)), ("α = 0", soft_exp(0)), ("α = 0.5", soft_exp(0.5))],
    [("−ln(1 − α(x + α)) / α", "α < 0"), ("x", "α = 0"), ("(e<sup>αx</sup> − 1) / α + α", "α > 0")],
@@ -355,7 +362,7 @@ fn("cosine", "Cosine", "periodic", math.cos, "f(x) = cos(x)",
    "[−1, 1]", True, xr=(-6.3, 6.3))
 fn("sinc", "Sinc", "periodic", lambda x: 1.0 if x == 0 else math.sin(x) / x, "f(x) = sin(x) / x",
    "A decaying oscillation whose Fourier transform is a box: an ideal low-pass filter in function form. Studied as an activation for function approximation.",
-   "≈ [−0.217, 1]", True, xr=(-10, 10))
+   None, True, xr=(-10, 10))
 fn("snake", "Snake", "periodic", lambda x: x + math.sin(x) ** 2, "f(x) = x + sin²(ax) / a",
    "The identity plus a periodic ripple, which gives networks an inductive bias toward periodic signals while staying monotonic. BigVGAN uses a version with learnable a for audio synthesis. Plotted with a = 1.",
    "(−∞, ∞)", True, src="Ziyin et al., 2020")
@@ -364,7 +371,7 @@ fn("gcu", "Growing cosine unit", "periodic", lambda x: x * math.cos(x), "f(x) = 
    "(−∞, ∞)", True, aka="GCU", src="Noel et al., 2021", xr=(-6.3, 6.3))
 fn("sinlu", "SinLU", "periodic", lambda x: (x + math.sin(x)) * sig(x), "f(x) = (x + a sin(bx)) · σ(x)",
    "A Swish-like gated unit that adds a learned sinusoidal ripple to the input before gating. Plotted with a = b = 1.",
-   "≈ [−0.3, ∞)", True, aka="Sinu-sigmoidal linear unit", src="Paul et al., 2022")
+   None, True, aka="Sinu-sigmoidal linear unit", src="Paul et al., 2022")
 fn("gaussian", "Gaussian", "periodic", lambda x: math.exp(-x * x), "f(x) = e<sup>−x²</sup>",
    "A bump that responds only near zero. The classic activation of radial basis function networks, and also used in implicit neural representations.",
    "(0, 1]", True, aka="RBF", xr=(-3, 3))
@@ -381,28 +388,28 @@ fn("inverse-multiquadric", "Inverse multiquadric", "periodic", lambda x: 1 / mat
 # ---------------------------------------------------------------- Swish & Mish descendants
 fn("e-swish", "E-swish", "swish-descendants", lambda x: 1.375 * x * sig(x), "f(x) = βx · σ(x)",
    "Swish multiplied by a constant β between 1 and 2 (β = 1.375 plotted), which its author found trained faster on image classification.",
-   "≈ [−0.38, ∞)", True, src="Alcaide, 2018")
+   None, True, src="Alcaide, 2018")
 fn("elish", "ELiSH", "swish-descendants", lambda x: x * sig(x) if x >= 0 else math.expm1(x) * sig(x),
    [("x · σ(x)", "x ≥ 0"), ("(e<sup>x</sup> − 1) · σ(x)", "x < 0")],
    "Swish for positive inputs and an ELU-style exponential times the sigmoid for negative ones. Found with a genetic search over activation shapes.",
-   "≈ [−0.24, ∞)", True, aka="Exponential linear sigmoid squashing", src="Basirat & Roth, 2018")
+   None, True, aka="Exponential linear sigmoid squashing", src="Basirat & Roth, 2018")
 fn("hard-elish", "HardELiSH", "swish-descendants",
    lambda x: (x if x >= 0 else math.expm1(x)) * max(0.0, min(1.0, (x + 1) / 2)),
    [("x · max(0, min(1, (x + 1)/2))", "x ≥ 0"), ("(e<sup>x</sup> − 1) · max(0, min(1, (x + 1)/2))", "x < 0")],
    "The hard-sigmoid version of ELiSH, cheaper to compute.",
-   "≈ [−0.12, ∞)", False, src="Basirat & Roth, 2018", mono=False)
+   None, False, src="Basirat & Roth, 2018", mono=False)
 fn("tanhexp", "TanhExp", "swish-descendants", lambda x: x * math.tanh(math.exp(x)), "f(x) = x · tanh(e<sup>x</sup>)",
    "Close to linear for positive inputs, because tanh(eˣ) reaches 1 quickly, with a small negative lobe. Proposed for lightweight networks.",
-   "≈ [−0.35, ∞)", True, src="Liu & Di, 2020")
+   None, True, src="Liu & Di, 2020")
 fn("serf", "Serf", "swish-descendants", lambda x: x * math.erf(softplus(x)), "f(x) = x · erf(ln(1 + e<sup>x</sup>))",
    "Log-softplus error function: Mish's shape with erf in place of tanh. Reported gains over Mish and Swish on image benchmarks.",
-   "≈ [−0.31, ∞)", True, src="Nag & Bhattacharyya, 2021")
+   None, True, src="Nag & Bhattacharyya, 2021")
 fn("logish", "Logish", "swish-descendants", lambda x: x * math.log1p(sig(x)), "f(x) = x · ln(1 + σ(x))",
    "Gates the input with the logarithm of 1 + σ(x); a gentler gate than Swish's, saturating at ln 2.",
-   "≈ [−0.11, ∞)", True, src="Zhu et al., 2021")
+   None, True, src="Zhu et al., 2021")
 fn("smish", "Smish", "swish-descendants", lambda x: x * math.tanh(math.log1p(sig(x))), "f(x) = x · tanh(ln(1 + σ(x)))",
    "Combines ideas from Mish and Logish: tanh of the log-sigmoid gate.",
-   "≈ [−0.11, ∞)", True, src="Wang et al., 2022")
+   None, True, src="Wang et al., 2022")
 fn("lisht", "LiSHT", "swish-descendants", lambda x: x * math.tanh(x), "f(x) = x · tanh(x)",
    "Even and non-negative: negative inputs map to positive outputs. Its authors argue the large gradients on the negative side avoid dying neurons.",
    "[0, ∞)", True, aka="Linearly scaled hyperbolic tangent", src="Roy et al., 2019", xr=(-3, 3))
@@ -425,7 +432,61 @@ fn("cube", "Cube", "other-research", lambda x: x ** 3, "f(x) = x³",
    "Used in a neural dependency parser to model three-way interactions between word, part-of-speech and label features directly. Unbounded and fast-growing, so it needs careful scaling.",
    "(−∞, ∞)", True, src="Chen & Manning, 2014", xr=(-2, 2))
 
-# Well-known functions queued for the next batches (shown on the site as "coming next").
-QUEUE = ["Dynamic ReLU", "FReLU (funnel activation)", "Kernel activation functions (KAF)", "Hexpo",
-         "Soft clipping", "ErfAct", "SMU", "Meta-ACON", "Bipolar ReLU", "Adaptive blending units",
-         "KAN spline activations", "Rectified power units (RePU)"]
+# Functions added from the Kunc & Kléma (2024) survey, one module per batch.
+import catalog_survey  # noqa: E402,F401
+
+# Functions described in the Kunc & Kléma survey that cannot be drawn as one fixed curve (shown on the site with the reason).
+NOT_PLOTTED = [
+    ("β-softmax", "vector function with a randomly sampled exponent"),
+    ("Softsign randomised leaky ReLU (S-RReLU)", "as written it has a pole at x = −1 and a randomly sampled slope"),
+    ("Noisy ReLU (NReLU)", "stochastic: adds Gaussian noise scaled to the input"),
+    ("Spatial context-aware activation (SCAA)", "uses a depth-wise convolution over the feature map"),
+    ("Randomly translational ReLU (RT-ReLU)", "stochastic shift during training; plain ReLU at test time"),
+    ("DualReLU", "takes two inputs"),
+    ("Orthogonal permutation linear unit (OPLU)", "acts on pairs of neurons"),
+    ("Elastic ReLU (EReLU)", "stochastic slope during training"),
+    ("Average biased ReLU (ABReLU)", "threshold computed from the data"),
+    ("DualELU", "takes two inputs"),
+    ("Elastic adaptively parametric compounded unit (EACU)", "stochastic slope plus trainable parameters"),
+    ("Lipschitz ReLU (L-ReLU)", "slope chosen from a data-dependent Lipschitz constant"),
+    ("Linear quadratic activation (LinQ)", "the survey's printed pieces do not join, and the intended form is unclear"),
+    ("Rand softplus (RSP)", "mixing weight set by the input noise level"),
+    ("Knowledge discovery activation (KDAC)", "multi-part adaptive definition with clipped interpolation"),
+    ("k-winners-take-all (k-WTA)", "vector function: keeps the k largest entries"),
+    ("Volatility-based activation (VBAF)", "takes a window of inputs"),
+    ("Hybrid chaotic activation (HCAF)", "recursive, chaotic definition"),
+    ("Fusion of chaotic activation (FCAF)", "recursive, chaotic definition"),
+    ("Cascade chaotic activation (CCAF)", "recursive, chaotic definition"),
+    ("Funnel PReLU (FunPReLU)", "uses a spatial (3×3) condition"),
+    ("Randomly translational PReLU (RT-PReLU)", "stochastic shift during training"),
+    ("Probabilistic activation (ProbAct)", "stochastic: adds sampled noise"),
+    ("Adaptive offset activation (AOAF)", "offset computed from the mean input"),
+    ("Dynamic leaky ReLU (DLReLU)", "slope set from the previous epoch's error"),
+    ("Dynamic ReLU (DReLU)", "threshold computed per batch"),
+    ("Dual parametric family (DPAF)", "a recipe for transforming any activation"),
+    ("Fully parameterised activation (FPAF)", "a recipe combining any two activations"),
+    ("Elastic PReLU (EPReLU)", "stochastic slope during training"),
+    ("Elastic ELU (EELU)", "stochastic slope during training"),
+    ("Tuned softmax (tsoftmax)", "vector function"),
+    ("Generalised Lehmer softmax (glsoftmax)", "vector function with data-dependent normalisation"),
+    ("Generalised power softmax (gpsoftmax)", "vector function with data-dependent normalisation"),
+    ("Noisy activation functions", "stochastic noise injected in the saturated regime"),
+    ("Fractional softplus, tanh, SiLU, GELU and ALU", "defined by fractional derivatives without a closed form"),
+    ("Fractional leaky / parametric ReLU and ELU", "complex-valued for negative inputs as written"),
+    ("Global-local neuron (GLN)", "the local component is not fully specified"),
+    ("Multi-bias activation (MBA)", "vector output with one channel per bias"),
+    ("Trapezoid-shaped activation (TSAF) and TSAFPlus", "the printed signs do not give the described trapezoid"),
+    ("Multi-bin trainable linear unit (MTLU)", "a general multi-segment recipe"),
+    ("Continuous piecewise nonlinear (CPN)", "a general multi-segment recipe"),
+    ("Look-up table unit (LuTU)", "a learned table of points"),
+    ("Average of a pool of activations (APAF)", "normalised using minimum and maximum over the data"),
+    ("Deep Kronecker networks (DKNN)", "a framework (its rowdy special case is shown)"),
+    ("Randomised Padé activation unit (RPAU)", "stochastic coefficients during training"),
+    ("Orthogonal Padé activation unit (OPAU)", "depends on the chosen orthogonal basis"),
+    ("Spline interpolating activations (SAF)", "a learned spline through knots"),
+    ("MeLUPlus", "the survey gives only one smoothed component"),
+    ("Variable activation function (VAF)", "a small subnetwork"),
+    ("Flexible activation bag (FAB)", "a subnetwork chooses and parameterises activations"),
+    ("Dynamic parameter ReLU (DY-ReLU)", "parameters predicted from the input by a hyperfunction"),
+    ("SAVE-inspired activations", "a list of variations without separate definitions"),
+]
